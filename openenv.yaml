@@ -1,0 +1,36 @@
+name: code-review-env
+version: 1.0.0
+description: AI agent reviews pull request diffs and flags bugs, style issues, and security vulnerabilities
+state:
+  type: object
+  fields:
+    - diff: string
+    - language: string
+    - prNumber: integer
+    - repoName: string
+actions:
+  - approve
+  - request_changes
+  - flag_line
+  - add_comment
+action_payload:
+  lineNumber: integer (optional)
+  category: style | logic | security
+  severity: low | medium | high
+  comment: string
+reward:
+  range: 0.0 to 1.0
+  partial_progress: true
+tasks:
+  - name: Style Review
+    difficulty: easy
+    description: Flag style issues such as missing semicolons, wrong indentation, unused variables
+    reward_threshold: 0.6
+  - name: Logic Bug Detection
+    difficulty: medium
+    description: Detect off-by-one errors, wrong conditionals, null pointer risks
+    reward_threshold: 0.75
+  - name: Security Vulnerability Detection
+    difficulty: hard
+    description: Catch SQL injection, XSS, hardcoded secrets, insecure dependencies
+    reward_threshold: 0.9
