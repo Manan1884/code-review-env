@@ -19,17 +19,23 @@ ENV NEXT_OUTPUT=standalone
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
+# Build as root (needed for HF Spaces secrets access during build)
+RUN npm run build
+
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Set permissions
-RUN chown -R nextjs:nodejs /app
+# Copy standalone output to final location and fix permissions
+RUN mkdir -p /app/.next/standalone/.next/static && \
+    cp -r /app/.next/static/* /app/.next/standalone/.next/static/ 2>/dev/null || true && \
+    cp -r /app/public /app/.next/standalone/ 2>/dev/null || true && \
+    chown -R nextjs:nodejs /app
 
 USER nextjs
 
 # Expose port
 EXPOSE 3000
 
-# Build and start at runtime (when env vars are available)
-CMD ["sh", "-c", "npm run build && node .next/standalone/server.js"]
+# Start the standalone server
+CMD ["node", ".next/standalone/server.js"]
