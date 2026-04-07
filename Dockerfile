@@ -1,54 +1,35 @@
-# Multi-stage build for Next.js application
-FROM node:20-alpine AS base
+# Runtime build Dockerfile for HF Spaces
+FROM node:20-alpine
 
-# Install dependencies only when needed
-FROM base AS deps
+# Install dependencies
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Copy package files
+# Copy package files and install dependencies
 COPY package.json package-lock.json* ./
 RUN npm ci
 
-# Rebuild the source code only when needed
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+# Copy all source code
 COPY . .
 
-# Set build-time environment variables (these will be replaced at runtime for HF Spaces)
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV NEXT_OUTPUT=standalone
-
-# Build the application
-RUN npm run build
-
-# Production image, copy all the files and run next
-FROM base AS runner
-WORKDIR /app
-
+# Set environment variables
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_OUTPUT=standalone
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy standalone output
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public
-
-# Set correct permissions
+# Set permissions
 RUN chown -R nextjs:nodejs /app
 
 USER nextjs
 
-# Expose the port
+# Expose port
 EXPOSE 3000
 
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
-
-# Start the application
-CMD ["node", "server.js"]
+# Build and start at runtime (when env vars are available)
+CMD ["sh", "-c", "npm run build && node .next/standalone/server.js"]
